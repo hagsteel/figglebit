@@ -1,4 +1,4 @@
-mod character;
+pub(super) mod character;
 mod parser;
 
 use character::Char;
@@ -25,18 +25,12 @@ pub struct Font {
 }
 
 impl Font {
-    fn write(&self, s: &str) {
-        let indices = s
-            .as_bytes()
+    pub fn to_chars(&self, s: &str) -> Vec<&Char> {
+        s.as_bytes()
             .into_iter()
             .map(|b| (b - 32) as usize)
-            .collect::<Vec<_>>();
-
-
-        for index in indices {
-            eprintln!("{:#?}", self.chars[index]);
-        }
-
+            .map(|i| &self.chars[i])
+            .collect::<Vec<_>>()
     }
 }
 
@@ -56,9 +50,4 @@ struct Header {
     code_tag_count: Option<i16>,
 }
 
-pub fn parse(font_data: String) {
-    match parser::parse(font_data) {
-        Ok(font) => font.write("hello"),
-        Err(e) => eprintln!("{:?}", e),
-    }
-}
+pub use parser::parse;

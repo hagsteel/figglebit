@@ -2,8 +2,8 @@ use super::{ParseErr, Result};
 
 #[derive(Debug)]
 pub struct Char {
-    width: usize,
-    lines: Vec<String>,
+    pub width: u16,
+    pub lines: Vec<String>,
 }
 
 impl Char {
@@ -38,8 +38,11 @@ impl Char {
             .next()
             .ok_or(ParseErr::EOLCharacterMissmatch)??;
 
+        // Get the character width
+        let width = lines.first().map(String::len).unwrap() as u16;
+
         Ok(Char {
-            width: 1,
+            width,
             lines,
         })
     }
