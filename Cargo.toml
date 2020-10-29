@@ -1,0 +1,11 @@
+[package]
+name = "figglebit"
+version = "0.1.0"
+authors = ["Hagsteel <me@hagsteel.com>"]
+edition = "2018"
+description = "FIGlet parser"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+crossterm = "0.18.1"
