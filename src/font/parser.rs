@@ -1,19 +1,5 @@
-// -----------------------------------------------------------------------------
-//     - Header -
-// -----------------------------------------------------------------------------
-//
-//          flf2a$ 6 5 20 15 3 0 143 229    NOTE: The first five characters in
-//            |  | | | |  |  | |  |   |     the entire file must be "flf2a".
-//           /  /  | | |  |  | |  |   \
-//  Signature  /  /  | |  |  | |   \   Codetag_Count
-//    Hardblank  /  /  |  |  |  \   Full_Layout*
-//         Height  /   |  |   \  Print_Direction
-//         Baseline   /    \   Comment_Lines
-//          Max_Length      Old_Layout*
-
 use super::character::Char;
 use super::{Font, Header};
-
 use super::{ParseErr, Result};
 
 const SIGNATURE: &'static str = "flf2";
@@ -47,7 +33,7 @@ fn parse_header(src: &str) -> Result<Header> {
         height: values.next().unwrap(),
         baseline: values.next().unwrap(),
         max_len: values.next().unwrap(),
-        old_layout: values.next().unwrap(),
+        old_layout: super::OldLayout::from_bits_truncate(values.next().unwrap()),
         comment_lines: values.next().unwrap_or(0) as usize,
         print_dir: values.next().unwrap_or(0),
         full_layout: values.next(),
@@ -56,6 +42,7 @@ fn parse_header(src: &str) -> Result<Header> {
 }
 
 pub fn parse(font_data: String) -> Result<Font> {
+    // First line is the header
     let first_line = font_data
         .find('\n')
         .map(|index| &font_data[..index])
@@ -63,6 +50,7 @@ pub fn parse(font_data: String) -> Result<Font> {
 
     let header = parse_header(first_line)?;
 
+    // Parsing character
     let chars = font_data
         .lines()
         .skip(header.comment_lines + 1) // + 1 for the header
@@ -74,5 +62,5 @@ pub fn parse(font_data: String) -> Result<Font> {
         .filter_map(Result::ok)
         .collect::<Vec<_>>();
 
-    Ok(Font { chars, header, })
+    Ok(Font { chars, header })
 }

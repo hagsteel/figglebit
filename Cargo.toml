@@ -9,3 +9,4 @@ description = "FIGlet parser"
 
 [dependencies]
 crossterm = "0.18.1"
+bitflags = "1.2.1"

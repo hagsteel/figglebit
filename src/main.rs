@@ -1,16 +1,20 @@
 use std::fs::read_to_string;
-use std::thread;
-use std::time::Duration;
 
-use figglebit::{cleanup, init, parse};
+use crossterm::ExecutableCommand;
+use crossterm::style::Print;
+
+use figglebit::{init, cleanup, parse, Renderer};
 
 fn main() {
-    let font_data = read_to_string("fonts/graffiti.flf").unwrap();
+    let font_data = read_to_string("fonts/Slant.flf").unwrap();
     let font = parse(font_data).unwrap();
-    let mut r = init(font).unwrap();
+    let renderer = Renderer::new(font);
 
-    let mut count = 0;
-    r.render_text("ll");
-    thread::sleep(Duration::from_secs(1));
+    let mut buf = String::new();
+    let _ = renderer.render("C-", unsafe { buf.as_mut_vec() });
+
+    let mut stdout = init().unwrap();
+    let _ = stdout.execute(Print(buf));
+
     cleanup();
 }

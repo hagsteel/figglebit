@@ -7,12 +7,10 @@ use crossterm::event::EnableMouseCapture;
 use crossterm::event::DisableMouseCapture;
 
 use crossterm::cursor;
-use crossterm::cursor::MoveTo;
-use crossterm::style::{Color, Print};
-use crossterm::terminal::{disable_raw_mode, enable_raw_mode, size, Clear, ClearType};
+use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
 use crossterm::{execute, ExecutableCommand, Result};
 
-use crate::{Char, Font};
+use crate::Font;
 
 fn raw_mode() -> Result<Stdout> {
     enable_raw_mode()?;
@@ -23,51 +21,110 @@ fn raw_mode() -> Result<Stdout> {
     Ok(stdout)
 }
 
-fn render_chars(mut stdout: Stdout, chars: Vec<&Char>, font: &Font) {}
-
 pub struct Renderer {
-    stdout: Stdout,
     font: Font,
 }
 
 impl Renderer {
-    pub fn clear(&mut self, width: u16, height: u16) {
-        let mut stdout = &mut self.stdout;
-        for y in 0..height {
-            let clr = " ".repeat(width as usize);
-            stdout.execute(MoveTo(0, y));
-            stdout.execute(Print(clr));
+    pub fn new(font: Font) -> Self {
+        Self {
+            font
         }
     }
 
-    pub fn render_text(&mut self, text: &str) {
+    pub fn render<T: Write + ?Sized>(&self, text: &str, buf: &mut T) -> std::io::Result<usize> {
         let chars = self.font.to_chars(text);
 
-        let mut offset = 0;
-        let mut stdout = &mut self.stdout;
-        for c in chars {
-            // draw the char
-            c.lines
-                .iter()
-                .enumerate()
-                .map(|(y, line)| {
-                    let x = offset;
-                    stdout.execute(MoveTo(x, y as u16));
-                    stdout.execute(Print(line.replace("$", " ")));
-                })
-                .count();
-            offset += c.width;
+        let count = self.font.header.height;
+
+        let mut current_line = 0;
+        let mut bytes_written = 0;
+
+        for _ in 0..count {
+            let _ = chars.iter().try_for_each::<_, io::Result<()>>(|c| {
+                let line = &c.lines[current_line];
+                bytes_written += buf.write(line.as_bytes())?;
+                Ok(())
+            })?;
+
+            current_line += 1;
+
+            bytes_written += buf.write(&[b'\r', b'\n'])?;
         }
+
+        Ok(bytes_written)
     }
 }
 
-pub fn init(font: Font) -> Result<Renderer> {
-    Ok(Renderer {
-        stdout: raw_mode()?,
-        font,
-    })
+pub fn init() -> Result<Stdout> {
+    Ok(raw_mode()?)
 }
 
 pub fn cleanup() {
-    disable_raw_mode();
+    let _ = disable_raw_mode();
+}
+
+#[cfg(test)]
+mod test {
+    use std::io::Write;
+    use super::*;
+
+    const FONT_DATA: &'static str = include_str!("../fonts/Slant.flf");
+
+    fn font() -> Font {
+        crate::parse(FONT_DATA.to_string()).unwrap()
+    }
+
+    #[test]
+    fn full_horizontal() {
+        let mut buf = Vec::new();
+        let renderer = Renderer::new(&mut buf, font());
+        let s = String::from_utf8(buf).unwrap();
+        let expected = r#"
+   ______
+  / ____/
+ / /      ______
+/ /___   /_____/
+\____/
+"#;
+
+        assert_eq!(expected, s);
+    }
+
+    // #[test]
+    // fn fitted_horizontal() {
+    //     render(&mut buf);
+    //     let expected = r#"
+   // ______
+  // / ____/
+ // / /   ______
+// / /___/_____/
+// \____/
+// "#;
+    // }
+
+    // #[test]
+    // fn smushed_right() {
+    //     render(&mut buf);
+    //     let expected = r#"
+   // ______
+  // / ____/
+ // / /  ______
+// / /__/_____/
+// \____/
+// "#;
+    // }
+
+    // #[test]
+    // fn smushed_universal() {
+    //     render(&mut buf);
+    //     let expected = r#"
+   // ______   
+  // / ____/   
+ // / /  ______
+// / /__/_____/
+// \____/ 
+// "#;
+    // }
+
 }
