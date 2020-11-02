@@ -11,10 +11,10 @@ fn main() {
     let renderer = Renderer::new(font);
 
     let mut buf = String::new();
-    let _ = renderer.render("C-", unsafe { buf.as_mut_vec() });
+    let res = renderer.render("C-", unsafe { buf.as_mut_vec() });
 
-    let mut stdout = init().unwrap();
-    let _ = stdout.execute(Print(buf));
+    // let mut stdout = init().unwrap();
+    // let _ = stdout.execute(Print(buf));
 
-    cleanup();
+    // cleanup();
 }

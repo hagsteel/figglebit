@@ -10,6 +10,7 @@ use crossterm::cursor;
 use crossterm::terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType};
 use crossterm::{execute, ExecutableCommand, Result};
 
+use crate::smushing::{get_horizontal_smush_len, horizontal_smush};
 use crate::Font;
 
 fn raw_mode() -> Result<Stdout> {
@@ -21,36 +22,72 @@ fn raw_mode() -> Result<Stdout> {
     Ok(stdout)
 }
 
+struct CharData {
+    offset: usize,
+}
+
 pub struct Renderer {
     font: Font,
 }
 
 impl Renderer {
     pub fn new(font: Font) -> Self {
-        Self {
-            font
-        }
+        Self { font }
     }
 
     pub fn render<T: Write + ?Sized>(&self, text: &str, buf: &mut T) -> std::io::Result<usize> {
-        let chars = self.font.to_chars(text);
+        let mut chars = self.font.to_chars(text).into_iter().peekable();
 
-        let count = self.font.header.height;
-
-        let mut current_line = 0;
+        let line_count = self.font.header.height as usize;
+        // let mut current_line = 0;
         let mut bytes_written = 0;
 
-        for _ in 0..count {
-            let _ = chars.iter().try_for_each::<_, io::Result<()>>(|c| {
-                let line = &c.lines[current_line];
-                bytes_written += buf.write(line.as_bytes())?;
-                Ok(())
-            })?;
+        let mut overlap = 10_000;
+        let mut output = vec!["".to_string(); line_count];
 
-            current_line += 1;
+        for (idx, c) in chars.enumerate() {
+            // TODO: in case of full width: just write each line, no need to do anything else
 
-            bytes_written += buf.write(&[b'\r', b'\n'])?;
+            overlap = 10_000;
+            for row in 0..line_count {
+                let next_overlap =
+                    get_horizontal_smush_len(&output[row], &c.lines[row], &self.font.header);
+                overlap = overlap.min(next_overlap);
+            }
+
+            output = horizontal_smush(&output, &c.lines, overlap, &self.font.header);
+
+            // Replace hard blanks with space
+            output.iter_mut().for_each(|mut line| {
+                *line = line.replace(self.font.header.hard_blank, " ");
+            });
         }
+
+        output.into_iter().for_each(|line| { eprintln!("{}", line); });
+
+        // // Find out how far to the left we can move a character
+        // // before it intersects with the previous character
+
+        // let mut pos = (0..line_count).collect::<Vec<usize>>();
+
+        // let offset = 3; // magic nonsense number, please remove
+        // for lid in 0..line_count {
+        //     let _ = chars.iter().try_for_each::<_, io::Result<()>>(|c| {
+        //         let offset = pos[lid];
+        //         let line = &c.lines[current_line];
+        //         let size_before = line.len();
+        //         let line = line.trim_end();
+        //         let size_after = line.len();
+        //         (0..offset).for_each(|_| { buf.write(&[b' ']); });
+        //         pos[lid] = size_before - size_after;
+        //         bytes_written += buf.write(line.as_bytes())?;
+        //         Ok(())
+        //     })?;
+
+        //     current_line += 1;
+
+        //     bytes_written += buf.write(&[b'\r', b'\n'])?;
+        // }
 
         Ok(bytes_written)
     }
@@ -66,8 +103,8 @@ pub fn cleanup() {
 
 #[cfg(test)]
 mod test {
-    use std::io::Write;
     use super::*;
+    use std::io::Write;
 
     const FONT_DATA: &'static str = include_str!("../fonts/Slant.flf");
 
@@ -95,36 +132,35 @@ mod test {
     // fn fitted_horizontal() {
     //     render(&mut buf);
     //     let expected = r#"
-   // ______
-  // / ____/
- // / /   ______
-// / /___/_____/
-// \____/
-// "#;
+    // ______
+    // / ____/
+    // / /   ______
+    // / /___/_____/
+    // \____/
+    // "#;
     // }
 
     // #[test]
     // fn smushed_right() {
     //     render(&mut buf);
     //     let expected = r#"
-   // ______
-  // / ____/
- // / /  ______
-// / /__/_____/
-// \____/
-// "#;
+    // ______
+    // / ____/
+    // / /  ______
+    // / /__/_____/
+    // \____/
+    // "#;
     // }
 
     // #[test]
     // fn smushed_universal() {
     //     render(&mut buf);
     //     let expected = r#"
-   // ______   
-  // / ____/   
- // / /  ______
-// / /__/_____/
-// \____/ 
-// "#;
+    // ______
+    // / ____/
+    // / /  ______
+    // / /__/_____/
+    // \____/
+    // "#;
     // }
-
 }

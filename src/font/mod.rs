@@ -55,7 +55,7 @@ impl Font {
 // 16  apply horizontal smushing rule 5 by default
 // 32  apply horizontal smushing rule 6 by default
 bitflags::bitflags! {
-    struct OldLayout: i16 {
+    pub struct OldLayout: i16 {
         const FULL_WIDTH = -1;
         const KERNING = 0;
         const HORZ_SMUSH_1 = 1;
@@ -69,11 +69,11 @@ bitflags::bitflags! {
 
 #[derive(Debug)]
 pub(crate) struct Header {
-    hard_blank: char,
+    pub hard_blank: char,
     pub(crate) height: i16,
     baseline: i16,
     max_len: i16,
-    old_layout: OldLayout,
+    pub old_layout: OldLayout,
     comment_lines: usize,
     print_dir: i16,
     full_layout: Option<i16>,

@@ -171,7 +171,7 @@ The three layout modes are:
         Moves FIGcharacters closer together until they touch.
         Typographers use the term "kerning" for this phenomenon
         when applied to the horizontal axis, but fitting also
-        includes this as a vertical behavior, for which there is
+        includes this as a vertical behaviour, for which there is
         apparently no established typographical term.
 
     Smushing (Same term for both axes.)
