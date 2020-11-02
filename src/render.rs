@@ -39,7 +39,6 @@ impl Renderer {
         let mut chars = self.font.to_chars(text).into_iter().peekable();
 
         let line_count = self.font.header.height as usize;
-        // let mut current_line = 0;
         let mut bytes_written = 0;
 
         let mut overlap = 10_000;
@@ -63,31 +62,11 @@ impl Renderer {
             });
         }
 
-        output.into_iter().for_each(|line| { eprintln!("{}", line); });
-
-        // // Find out how far to the left we can move a character
-        // // before it intersects with the previous character
-
-        // let mut pos = (0..line_count).collect::<Vec<usize>>();
-
-        // let offset = 3; // magic nonsense number, please remove
-        // for lid in 0..line_count {
-        //     let _ = chars.iter().try_for_each::<_, io::Result<()>>(|c| {
-        //         let offset = pos[lid];
-        //         let line = &c.lines[current_line];
-        //         let size_before = line.len();
-        //         let line = line.trim_end();
-        //         let size_after = line.len();
-        //         (0..offset).for_each(|_| { buf.write(&[b' ']); });
-        //         pos[lid] = size_before - size_after;
-        //         bytes_written += buf.write(line.as_bytes())?;
-        //         Ok(())
-        //     })?;
-
-        //     current_line += 1;
-
-        //     bytes_written += buf.write(&[b'\r', b'\n'])?;
-        // }
+        output.iter().try_for_each::<_, io::Result<()>>(|line| {
+            bytes_written += buf.write(line.as_bytes())?;
+            bytes_written += buf.write(&[b'\r', b'\n'])?;
+            Ok(())
+        })?;
 
         Ok(bytes_written)
     }
